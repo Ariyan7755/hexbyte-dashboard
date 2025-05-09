@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HexByte Panel</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 0;
+      margin: 0;
+      min-height: 100vh;
+      background: #0c0c1d;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0c0c1d 0%, #13131f 100%);
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 450px;
+      padding: 20px;
+    }
+    
+    .card {
+      background: rgba(16, 18, 34, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(0, 162, 255, 0.2), 
+                  0 0 60px rgba(0, 162, 255, 0.1),
+                  inset 0 0 10px rgba(0, 225, 255, 0.05);
+      border: 1px solid rgba(0, 162, 255, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(0, 162, 255, 0.1),
+        transparent
+      );
+      transform: rotate(45deg);
+      animation: shine 6s infinite linear;
+      pointer-events: none;
+    }
+    
+    @keyframes shine {
+      0% { transform: translateX(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) rotate(45deg); }
+    }
+    
+    h2 {
+      color: #00BFFF;
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 28px;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+    }
+    
+    .logo {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      color: #00BFFF;
+    }
+    
+    input {
+      padding: 12px 15px;
+      margin: 12px 0;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 162, 255, 0.4);
+      background: rgba(13, 15, 30, 0.8);
+      color: white;
+      box-sizing: border-box;
+      transition: all 0.3s;
+      font-size: 14px;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #00BFFF;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.4);
+    }
+    
+    button {
+      padding: 12px;
+      margin: 15px 0;
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(90deg, #0066ff, #00BFFF);
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+      font-size: 15px;
+      letter-spacing: 1px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0, 191, 255, 0.4);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
+    }
+    
+    button:active {
+      transform: translateY(1px);
+    }
+    
+    button::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+      );
+      transition: 0.5s;
+    }
+    
+    button:hover::after {
+      left: 100%;
+      transition: 0.5s;
+    }
+    
+    #user-info {
+      margin-top: 25px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(0, 162, 255, 0.3);
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(0, 162, 255, 0.15);
+    }
+    
+    .info-label {
+      font-weight: bold;
+      color: #8fb7ff;
+    }
+    
+    .info-value {
+      color: white;
+    }
+    
+    .status-badge {
+      padding: 5px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    
+    .status-active {
+      background: rgba(0, 255, 127, 0.2);
+      color: #00ff7f;
+      border: 1px solid rgba(0, 255, 127, 0.3);
+    }
+    
+    .status-paused {
+      background: rgba(255, 165, 0, 0.2);
+      color: #ffa500;
+      border: 1px solid rgba(255, 165, 0, 0.3);
+    }
+    
+    .status-blacklisted {
+      background: rgba(255, 0, 80, 0.2);
+      color: #ff0050;
+      border: 1px solid rgba(255, 0, 80, 0.3);
+    }
+    
+    .reset-btn {
+      margin-top: 20px;
+      background: linear-gradient(90deg, #003380, #0066cc);
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .loading:after {
+      content: "•••";
+      animation: dots 1.5s steps(1, end) infinite;
+    }
+    
+    @keyframes dots {
+      0%, 20% { content: "•"; }
+      40% { content: "••"; }
+      60%, 100% { content: "•••"; }
+    }
+    
+    .error-msg {
+      color: #ff0050;
+      text-align: center;
+      padding: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="logo">HEXBYTE</div>
+      <h2>User Dashboard</h2>
+      
+      <input type="text" id="username" placeholder="Enter your username" autocomplete="off">
+      <button onclick="loadUser()" id="load-btn">Load Panel</button>
+      <div class="error-msg" id="error-msg">User not found</div>
+      
+      <div id="loading" class="loading" style="display:none;">Loading</div>
+      
+      <div id="user-info" style="display:none;">
+        <div class="info-row">
+          <span class="info-label">Username:</span>
+          <span class="info-value" id="u_name"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">HWID:</span>
+          <span class="info-value" id="hwid"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Days Left:</span>
+          <span class="info-value" id="daysLeft"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Status:</span>
+          <span id="status"></span>
+        </div>
+        <button onclick="resetHWID()" class="reset-btn">Reset HWID</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const firebaseConfig = {
+      projectId: "hexbyteauth"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    // Add event listener for Enter key on username input
+    document.getElementById("username").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        loadUser();
+      }
+    });
+    
+    // Improved loading function with loading indicator
+    async function loadUser() {
+      const username = document.getElementById("username").value.trim();
+      if (!username) {
+        showError("Please enter a username");
+        return;
+      }
+      
+      showLoading(true);
+      hideError();
+      
+      try {
+        const doc = await db.collection("users").doc(username).get();
+        if (!doc.exists) {
+          showError("User not found");
+          showLoading(false);
+          return;
+        }
+        
+        const data = doc.data();
+        const hwid = data.hwid || "Not Set";
+        const expiry = new Date(data.expiry);
+        const now = new Date();
+        const days = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+        const paused = data.paused || false;
+        const blacklisted = data.blacklisted || false;
+        
+        document.getElementById("u_name").innerText = username;
+        document.getElementById("hwid").innerText = hwid;
+        document.getElementById("daysLeft").innerText = days + " day(s)";
+        
+        // Create status badge with appropriate class
+        const statusEl = document.getElementById("status");
+        let statusClass = "status-active";
+        let statusText = "Active";
+        
+        if (blacklisted) {
+          statusClass = "status-blacklisted";
+          statusText = "Blacklisted";
+        } else if (paused) {
+          statusClass = "status-paused";
+          statusText = "Paused";
+        }
+        
+        statusEl.innerHTML = `<span class="status-badge ${statusClass}">${statusText}</span>`;
+        
+        document.getElementById("user-info").style.display = "block";
+        showLoading(false);
+      } catch (error) {
+        console.error("Error loading user:", error);
+        showError("Error connecting to database");
+        showLoading(false);
+      }
+    }
+    
+    async function resetHWID() {
+      const username = document.getElementById("username").value;
+      
+      try {
+        showLoading(true);
+        await db.collection("users").doc(username).update({ hwid: "" });
+        showLoading(false);
+        
+        // Create and show success notification
+        const notification = document.createElement("div");
+        notification.style.position = "fixed";
+        notification.style.top = "20px";
+        notification.style.left = "50%";
+        notification.style.transform = "translateX(-50%)";
+        notification.style.background = "rgba(0, 255, 127, 0.2)";
+        notification.style.border = "1px solid rgba(0, 255, 127, 0.3)";
+        notification.style.color = "#00ff7f";
+        notification.style.padding = "12px 20px";
+        notification.style.borderRadius = "8px";
+        notification.style.zIndex = "1000";
+        notification.innerHTML = "HWID has been reset successfully";
+        document.body.appendChild(notification);
+        
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+        
+        loadUser(); // Refresh info
+      } catch (error) {
+        console.error("Error resetting HWID:", error);
+        showError("Error resetting HWID");
+        showLoading(false);
+      }
+    }
+    
+    function showLoading(show) {
+      document.getElementById("loading").style.display = show ? "block" : "none";
+      document.getElementById("load-btn").disabled = show;
+    }
+    
+    function showError(message) {
+      const errorEl = document.getElementById("error-msg");
+      errorEl.innerText = message;
+      errorEl.style.display = "block";
+      document.getElementById("user-info").style.display = "none";
+    }
+    
+    function hideError() {
+      document.getElementById("error-msg").style.display = "none";
+    }
+  </script>
+</body>
+</html>
