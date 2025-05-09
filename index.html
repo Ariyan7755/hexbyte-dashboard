@@ -258,8 +258,15 @@
   
   <script>
     const firebaseConfig = {
-      projectId: "hexbyteauth"
-    };
+  apiKey: "YOUR_API_KEY",
+  authDomain: "hexbyteauth.firebaseapp.com",
+  projectId: "hexbyteauth",
+  storageBucket: "hexbyteauth.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     
